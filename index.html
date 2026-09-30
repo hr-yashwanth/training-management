@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>H R Yashwanth — Training Management System</title>
+
+
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f4f6f8;color:#17202a}
+header{background:#17365d;color:#fff;padding:18px 24px;display:flex;justify-content:space-between;align-items:center}
+header h1{margin:0;font-size:20px} header small{opacity:.85}
+nav{background:#fff;padding:12px 24px;border-bottom:1px solid #ddd;display:flex;flex-wrap:wrap}
+button{border:0;border-radius:7px;padding:10px 14px;cursor:pointer;background:#17365d;color:#fff;margin:3px}
+button.secondary{background:#e9eef5;color:#17365d}.danger{background:#a33}
+main{max-width:1100px;margin:24px auto;padding:0 16px}.card{background:#fff;border:1px solid #ddd;border-radius:10px;padding:20px;margin-bottom:18px;box-shadow:0 1px 3px #0001}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}.stat{font-size:28px;font-weight:700}.muted{color:#667}
+label{display:block;font-weight:600;margin-bottom:5px}input,select,textarea{width:100%;padding:10px;border:1px solid #bbb;border-radius:6px;margin-bottom:12px}
+table{width:100%;border-collapse:collapse}th,td{padding:9px;border-bottom:1px solid #ddd;text-align:left;font-size:14px}
+.badge{display:inline-block;padding:4px 8px;border-radius:20px;background:#e7f2e8}.hidden{display:none}
+.question{border:1px solid #ddd;padding:15px;border-radius:8px;margin:10px 0}.option{margin:7px 0}
+.notice{padding:12px;border-radius:7px;background:#eef5ff;border-left:4px solid #17365d}
+.login{max-width:420px;margin:70px auto}.qr-box{display:flex;gap:20px;align-items:center;flex-wrap:wrap;margin-top:15px}
+.qr-card{border:1px solid #ddd;border-radius:10px;padding:16px;background:#fff;text-align:center}.kpi{padding:14px;border:1px solid #ddd;border-radius:8px;background:#fafafa}
+.success{background:#e8f6ed;border-left-color:#218838}.warn{background:#fff6df;border-left-color:#b87900}
+.feedback-form{overflow:auto}.feedback-legend{margin:14px 0;padding:10px;border:1px solid #ccc;background:#f8f8f8;font-size:13px}.feedback-table-wrap{overflow:auto}.exact-feedback{min-width:1250px}.exact-feedback th,.exact-feedback td{border:1px solid #777;vertical-align:middle;text-align:center}.exact-feedback th{background:#f1f1f1;font-size:12px}.exact-feedback td{font-size:12px}.exact-feedback select,.exact-feedback input,.exact-feedback textarea{margin:0;min-width:75px;padding:6px;font-size:11px}.feedback-footer{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:16px}.feedback-footer>div{border:1px solid #777;padding:10px;min-height:70px}.feedback-footer input{margin-top:10px}@media(max-width:650px){.feedback-footer{grid-template-columns:1fr}}
+@media(max-width:650px){header{display:block}.grid{grid-template-columns:1fr}table{font-size:12px}}
+</style>
+</head>
+<body>
+<div id="loginPage" class="login card">
+<h2>Admin Login</h2>
+<p class="muted">H R Yashwanth — Training Management System</p>
+<label>User ID</label><input id="loginUser" autocomplete="username" value="admin" onkeydown="if(event.key==='Enter')login()">
+<label>Password</label><input id="loginPass" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')login()">
+<button type="button" onclick="login()">Login</button>
+<button type="button" class="secondary" onclick="togglePassword()">Show Password</button>
+<div id="loginError" class="notice warn hidden" style="margin-top:12px"></div>
+
+</div>
+
+<div id="app" class="hidden">
+<header><div><h1>H R Yashwanth</h1><small>Training Management System — Prestige Minsk Square</small></div><div>Admin <button class="secondary" onclick="logout()">Logout</button></div></header>
+<nav>
+<button onclick="show('dashboard')">Dashboard</button>
+<button onclick="show('create')">Create Training</button>
+<button onclick="show('records')">Past Training</button>
+<button id="superAdminNav" class="hidden" onclick="show('users')">User Management</button>
+<button onclick="show('settings')">QR / App Settings</button>
+</nav>
+<main>
+<section id="dashboard" class="page">
+<div class="card"><h2>Admin Dashboard</h2><div class="notice">Site name is permanently fixed to <b>Prestige Minsk Square</b>. All Admins can view all past training records.</div></div>
+<div class="grid">
+<div class="card"><div class="stat" id="statTrainings">0</div>Trainings</div>
+<div class="card"><div class="stat" id="statTrainees">0</div>Trainee submissions</div>
+<div class="card"><div class="stat" id="statTests">0</div>Tests completed</div>
+</div><div class="card"><h3>Recent Trainings</h3><div id="recent"></div></div>
+</section>
+
+<section id="create" class="page hidden">
+<div class="card"><h2>Create Training</h2>
+<label>Site Name</label><input value="Prestige Minsk Square" disabled>
+<label>Training Topic</label><input id="topic" placeholder="e.g. DG Operations">
+<label>Trainer</label><input id="trainer">
+<label>Department</label><input id="dept">
+<label>Training Date</label><input id="date" type="date">
+<label>Training Method</label><select id="method"><option>Classroom</option><option>Practical</option><option>On-the-job</option><option>Online</option><option>Demonstration</option></select>
+<h3>Test Questions</h3><div id="questions"></div><button onclick="addQuestion()">+ Add Question</button><br><br>
+<button onclick="saveTraining()">Save & Publish Training</button></div>
+</section>
+
+<section id="records" class="page hidden">
+<div class="card"><h2>All Training Records</h2><input id="search" placeholder="Search topic, trainer, department..." oninput="renderRecords()"><div id="recordsTable"></div></div>
+</section>
+
+<section id="recordDashboard" class="page hidden">
+<div class="card"><h2 id="rdTitle">Training Record</h2><div id="rdSummary" class="grid"></div>
+<div id="rdQr" class="qr-box"></div><h3>Trainee Results</h3><div id="rdTrainees"></div><br>
+<button onclick="show('records')">← Back to Past Training</button>
+<button onclick="exportTrainingExcel(currentRecordId)">Download Completed Excel</button>
+<button onclick="downloadTemplate()">Download Exact Original Excel Template</button>
+<button onclick="downloadJSON(currentRecordId)">Export Backup JSON</button>
+<button onclick="window.print()">Print / Save as PDF</button></div>
+</section>
+
+<section id="users" class="page hidden">
+<div class="card"><h2>User Management</h2>
+<div class="notice success">Only the Super Admin can create, disable, or re-enable Admin accounts.</div>
+<h3>Create Admin</h3>
+<div class="grid">
+<div><label>User ID</label><input id="newAdminUser"></div>
+<div><label>Admin Name</label><input id="newAdminName"></div>
+<div><label>Password</label><input id="newAdminPass" type="password"></div>
+</div>
+<button onclick="createAdmin()">Create Admin</button>
+<h3>Admin Accounts</h3><div id="adminTable"></div>
+</div></section>
+
+<section id="settings" class="page hidden">
+<div class="card"><h2>QR / App Settings</h2>
+<div class="notice warn"><b>Important:</b> A phone can only open a QR attendance link if the application is hosted at a URL that the phone can reach. A ZIP file on a computer is not an online website.</div>
+<label>Public App URL</label><input id="publicUrl" placeholder="https://your-domain.com/" onchange="saveSettings()"><small style="display:block;margin-top:6px">Works with current Chrome and Safari. For phone testing on the same Wi-Fi, open this app using the computer LAN address.</small>
+<p class="muted">For the production system this will be the permanent secure website address. Every QR code will use this address plus the training ID.</p>
+<button onclick="saveSettings();alert('Settings saved. Open a training dashboard to regenerate its QR code.')">Save URL</button>
+</div></section>
+
+<section id="trainee" class="page hidden">
+<div class="card"><h2>Training Attendance</h2><div id="traineeForm"></div></div>
+</section>
+</main></div>
+
+<script>
+const KEY='pms_training_v7';
+let data;
+try{data=JSON.parse(localStorage.getItem(KEY)||'null')}catch(e){data=null}
+if(!data||typeof data!=='object')data={trainings:[],settings:{publicUrl:''},users:[]};
+data.trainings=Array.isArray(data.trainings)?data.trainings:[];
+data.settings=(data.settings&&typeof data.settings==='object')?data.settings:{publicUrl:''};
+data.users=Array.isArray(data.users)?data.users:[];
+let qCount=0,currentRecordId=null,currentUser=null;
+const DEFAULT_SUPER={user:'superadmin',password:'SuperAdmin@123',name:'Super Admin',role:'superadmin',enabled:true};
+const DEFAULT_ADMIN={user:'admin',password:'admin123',name:'Administrator',role:'admin',enabled:true};
+
+function login(){
+let u=(document.getElementById('loginUser').value||'').trim().toLowerCase();
+let p=(document.getElementById('loginPass').value||'').trim();
+let err=document.getElementById('loginError');
+let found=[DEFAULT_SUPER,DEFAULT_ADMIN,...data.users].find(x=>String(x.user).toLowerCase()===u&&x.password===p&&x.enabled!==false);
+if(found){currentUser=found;sessionStorage.setItem('pms_user',JSON.stringify({user:found.user,role:found.role,name:found.name}));if(err){err.classList.add('hidden');err.textContent='';}startApp();}
+else{if(err){err.textContent='Login failed. Check User ID and Password.';err.classList.remove('hidden');}document.getElementById('loginPass').focus();}
+}
+function togglePassword(){
+let p=document.getElementById('loginPass');
+p.type=p.type==='password'?'text':'password';
+}
+function logout(){sessionStorage.removeItem('pms_user');location.reload()}
+function startApp(){
+document.getElementById('loginPage').classList.add('hidden');
+document.getElementById('app').classList.remove('hidden');
+document.getElementById('superAdminNav').classList.toggle('hidden',currentUser?.role!=='superadmin');
+updateStats();renderRecords();
+if(!document.querySelector('#questions .question'))addQuestion();
+document.getElementById('publicUrl').value=data.settings?.publicUrl||((location.protocol==='http:'||location.protocol==='https:')?location.href.split('#')[0]:'');
+if(currentUser?.role==='superadmin')renderAdmins();
+}
+try{let saved=sessionStorage.getItem('pms_user');if(saved){let x=JSON.parse(saved);currentUser=[DEFAULT_SUPER,DEFAULT_ADMIN,...data.users].find(u=>u.user===x.user&&u.role===x.role);if(currentUser)startApp();}}catch(e){sessionStorage.removeItem('pms_user')}
+function requireSuper(){if(currentUser?.role!=='superadmin'){alert('Super Admin access required.');return false}return true}
+function createAdmin(){
+if(!requireSuper())return;
+let u=(document.getElementById('newAdminUser').value||'').trim().toLowerCase(),n=(document.getElementById('newAdminName').value||'').trim(),p=(document.getElementById('newAdminPass').value||'').trim();
+if(!u||!n||!p)return alert('Enter User ID, Admin Name and Password.');
+if(u==='superadmin'||data.users.some(x=>x.user===u))return alert('That User ID already exists.');
+data.users.push({user:u,name:n,password:p,role:'admin',enabled:true,created:new Date().toISOString()});
+save();renderAdmins();alert('Admin created successfully.');
+}
+function toggleAdmin(u){if(!requireSuper())return;let a=data.users.find(x=>x.user===u);if(a){a.enabled=a.enabled===false;save();renderAdmins()}}
+function deleteAdmin(u){if(!requireSuper())return;let a=data.users.find(x=>x.user===u);if(!a)return;if(!confirm('Delete Admin account '+a.user+'? This cannot be undone.'))return;data.users=data.users.filter(x=>x.user!==u);save();renderAdmins()}
+function renderAdmins(){if(currentUser?.role!=='superadmin')return;let rows=data.users.map((a,i)=>`<tr><td>${i+1}</td><td>${esc(a.name)}</td><td>${esc(a.user)}</td><td>${a.enabled===false?'Disabled':'Active'}</td><td><button onclick="toggleAdmin('${esc(a.user)}')">${a.enabled===false?'Enable':'Disable'}</button><button class="danger" onclick="deleteAdmin('${esc(a.user)}')">Delete</button></td></tr>`).join('');document.getElementById('adminTable').innerHTML=`<table><tr><th>#</th><th>Name</th><th>User ID</th><th>Status</th><th>Action</th></tr>${rows||'<tr><td colspan="5">No Admin accounts created yet.</td></tr>'}</table>`}
+
+function save(){localStorage.setItem(KEY,JSON.stringify(data));updateStats();renderRecords()}
+function show(id){document.querySelectorAll('.page').forEach(x=>x.classList.add('hidden'));document.getElementById(id).classList.remove('hidden');if(id==='records')renderRecords();updateStats()}
+function addQuestion(q={text:'',options:['','','',''],answer:0,marks:1}){qCount++;let n=qCount,d=document.createElement('div');d.className='question';d.id='q'+n;d.innerHTML=`<b>Question ${n}</b><input class="qtext" placeholder="Enter question" value="${esc(q.text)}"><div class="grid">${q.options.map((o,i)=>`<div><label>Option ${String.fromCharCode(65+i)}</label><input class="qopt" value="${esc(o)}"></div>`).join('')}</div><label>Correct Answer</label><select class="qans">${q.options.map((_,i)=>`<option value="${i}" ${i===q.answer?'selected':''}>${String.fromCharCode(65+i)}</option>`).join('')}</select><label>Marks</label><input class="qmarks" type="number" value="${q.marks}" min="1">`;document.getElementById('questions').appendChild(d)}
+function collectQuestions(){return [...document.querySelectorAll('.question')].map(d=>({text:d.querySelector('.qtext').value,options:[...d.querySelectorAll('.qopt')].map(x=>x.value),answer:+d.querySelector('.qans').value,marks:+d.querySelector('.qmarks').value||1})).filter(q=>q.text)}
+function saveTraining(){let topic=document.getElementById('topic').value.trim();if(!topic)return alert('Enter training topic.');let t={id:Date.now().toString(),site:'Prestige Minsk Square',topic,trainer:document.getElementById('trainer').value,dept:document.getElementById('dept').value,date:document.getElementById('date').value,method:document.getElementById('method').value,questions:collectQuestions(),trainees:[],created:new Date().toISOString()};data.trainings.unshift(t);save();document.getElementById('topic').value='';viewRecord(t.id)}
+function renderRecords(){let q=(document.getElementById('search')?.value||'').toLowerCase(),arr=data.trainings.filter(t=>JSON.stringify(t).toLowerCase().includes(q));document.getElementById('recordsTable').innerHTML=arr.length?`<table><tr><th>Date</th><th>Topic</th><th>Trainer</th><th>Department</th><th>Trainees</th><th>Action</th></tr>${arr.map(t=>`<tr><td>${esc(t.date||'')}</td><td>${esc(t.topic)}</td><td>${esc(t.trainer)}</td><td>${esc(t.dept)}</td><td>${t.trainees.length}</td><td><button onclick="viewRecord('${t.id}')">Open Dashboard</button></td></tr>`).join('')}</table>`:'<p>No records found.</p>'}
+function viewRecord(id){currentRecordId=id;let t=data.trainings.find(x=>x.id===id);if(!t)return;document.getElementById('rdTitle').textContent=`Training Record — ${t.topic}`;let tests=t.trainees.filter(x=>x.test),fbs=t.trainees.filter(x=>x.feedback),avg=fbs.length?(fbs.reduce((a,x)=>a+x.feedback.average,0)/fbs.length).toFixed(2):'—';document.getElementById('rdSummary').innerHTML=`<div class="kpi"><b>Site</b><br>${esc(t.site)}</div><div class="kpi"><b>Date</b><br>${esc(t.date||'—')}</div><div class="kpi"><b>Trainees</b><br>${t.trainees.length}</div><div class="kpi"><b>Tests Completed</b><br>${tests.length}</div><div class="kpi"><b>Average Feedback</b><br>${avg} / 4</div>`;let url=attendanceUrl(t);document.getElementById('rdQr').innerHTML=`<div class="qr-card"><div id="qrCode"></div><b>Scan for Attendance</b><br><small>${esc(t.topic)} · ${esc(t.date||'')}</small></div><div><b>Attendance link</b><br><input value="${esc(url)}" readonly onclick="this.select()"><button onclick="copyText('${esc(url)}')">Copy Link</button><button onclick="window.print()">Print QR</button></div>`;setTimeout(()=>makeQR(url),50);let rows=t.trainees.map((r,i)=>`<tr><td>${i+1}</td><td>${esc(r.name)}</td><td>${esc(r.eid)}</td><td>${esc(r.desig)}</td><td>${r.test?r.test.percentage+'%':'Not completed'}</td><td>${r.feedback?r.feedback.average.toFixed(2):'Not submitted'}</td></tr>`).join('');document.getElementById('rdTrainees').innerHTML=rows?`<table><tr><th>#</th><th>Name</th><th>Employee ID</th><th>Designation</th><th>Test</th><th>Feedback</th></tr>${rows}</table>`:'<p>No trainee records yet.</p>';show('recordDashboard')}
+function getAppBaseUrl(){
+let saved=(data.settings?.publicUrl||'').trim();
+if(saved){
+  try{let u=new URL(saved); if(/^https?:$/.test(u.protocol)) return saved.replace(/\/+$/,'');}catch(e){}
+}
+try{
+  let u=new URL(location.href);
+  if((u.protocol==='http:'||u.protocol==='https:') && u.hostname && u.hostname!=='localhost' && u.hostname!=='127.0.0.1') return u.origin + (u.pathname||'/').replace(/\/+$/,'');
+}catch(e){}
+return '';
+}
+function b64urlEncode(obj){
+try{let bytes=new TextEncoder().encode(JSON.stringify(obj));let bin='';for(let i=0;i<bytes.length;i+=0x8000)bin+=String.fromCharCode(...bytes.subarray(i,i+0x8000));return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}catch(e){return ''}}
+function b64urlDecode(s){
+try{let b=s.replace(/-/g,'+').replace(/_/g,'/');while(b.length%4)b+='=';let bin=atob(b),bytes=Uint8Array.from(bin,c=>c.charCodeAt(0));return JSON.parse(new TextDecoder().decode(bytes));}catch(e){return null}}
+function attendanceUrl(t){
+  let base=getAppBaseUrl();
+  if(!base){
+    try{
+      if(data.settings?.publicUrl) base=data.settings.publicUrl.trim().replace(/\/+$/,'');
+    }catch(e){}
+  }
+  if(!base) return '';
+  let payload={id:String(t.id),site:'Prestige Minsk Square',topic:t.topic||'',trainer:t.trainer||'',dept:t.dept||'',date:t.date||'',method:t.method||'',questions:Array.isArray(t.questions)?t.questions:[]};
+  let packed=b64urlEncode(payload);
+  // IMPORTANT: the QR contains the COMPLETE HTTPS website URL, not just the payload.
+  // Use short, browser-standard query parameter names for Chrome/Safari compatibility.
+  let sep=base.includes('?')?'&':'?';
+  return base+sep+'data='+encodeURIComponent(packed);
+}
+function makeQR(url){
+let el=document.getElementById('qrCode');if(!el)return;
+el.innerHTML='';
+if(!url){el.innerHTML='<div class="notice warn"><b>QR needs a web address.</b><br>For phone scanning, open this app from a reachable HTTP/HTTPS address (for example, the computer LAN address) or set the Public App URL under QR / App Settings.</div>';return;}
+let img=document.createElement('img');img.width=220;img.height=220;img.alt='Training attendance QR code';img.style.display='block';img.style.margin='0 auto';
+let encoded=encodeURIComponent(url),n=0;
+let sources=[
+'https://quickchart.io/qr?size=220&margin=2&ecLevel=M&text='+encoded,
+'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data='+encoded,
+'https://chart.googleapis.com/chart?cht=qr&chs=220x220&chl='+encoded
+];
+function fail(){n++;if(n<sources.length){img.src=sources[n];}else{el.innerHTML='<div class="notice warn"><b>QR image service is unavailable.</b><br>The attendance link above is still available. Check your internet connection or set the Public App URL under QR / App Settings.</div>';}}
+img.onload=()=>{el.innerHTML='';el.appendChild(img);let p=document.createElement('small');p.style.display='block';p.style.marginTop='8px';p.textContent=(url.startsWith('http:')?'QR contains the full training attendance URL. Chrome and Safari can open this link directly.':'QR contains the full training attendance URL.');el.appendChild(p);};
+img.onerror=fail;img.src=sources[0];
+}
+function saveSettings(){data.settings=data.settings||{};data.settings.publicUrl=document.getElementById('publicUrl').value.trim();save()}
+function copyText(x){navigator.clipboard?.writeText(x).then(()=>alert('Attendance link copied.')).catch(()=>alert('Copy failed; select and copy the link manually.'))}
+
+function downloadTemplate(){let a=document.createElement('a');a.href='BSC-PRO-09-F06%20Training%20Evaluation%20%26%20Feedback.xlsx';a.download='BSC-PRO-09-F06 Training Evaluation & Feedback.xlsx';a.click()}
+function exportTrainingExcel(id){let t=data.trainings.find(x=>x.id===id);if(!t)return;if(!window.XLSX)return alert('Excel export library could not be loaded. Connect to the internet and try again.');let wb=XLSX.utils.book_new();let rows=[['PRESTIGE MINSK SQUARE','Training Attendance, Evaluation & Feedback Form'],['Document No.','BSC/PRO/09/F06'],['Revision','0'],[],['Site Name & Location',t.site],['Trainer',t.trainer],['Topic Covered',t.topic],['Department',t.dept],['Training Date',t.date],['Method',t.method],[],['Sl. No.','Trainee Name','Employee ID','Designation','Test %','Test Result','Content','Trainer','Duration','Facility','Feedback Average','Remarks']];t.trainees.forEach((r,i)=>{rows.push([i+1,r.name,r.eid,r.desig,r.test?.percentage??'',r.test?(r.test.percentage>=0?'Completed':''):'',r.feedback?.content??'',r.feedback?.trainer??'',r.feedback?.duration??'',r.feedback?.facility??'',r.feedback?.average??'',r.feedback?.remarks??''])});let ws=XLSX.utils.aoa_to_sheet(rows);ws['!cols']=[{wch:8},{wch:24},{wch:16},{wch:20},{wch:10},{wch:14},{wch:10},{wch:10},{wch:10},{wch:10},{wch:16},{wch:30}];XLSX.utils.book_append_sheet(wb,ws,'Training Record');XLSX.writeFile(wb,`BSC-PRO-09-F06_${safe(t.topic)}_${t.date||'Training'}.xlsx`)}
+function downloadJSON(id){let t=data.trainings.find(x=>x.id===id),a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(t,null,2)],{type:'application/json'}));a.download=`PMS_${safe(t.topic)}_${t.date||'training'}.json`;a.click()}
+function safe(s){return String(s||'Training').replace(/[^a-z0-9]+/gi,'_')}
+function updateStats(){let ts=data.trainings;document.getElementById('statTrainings').textContent=ts.length;document.getElementById('statTrainees').textContent=ts.reduce((a,t)=>a+t.trainees.length,0);document.getElementById('statTests').textContent=ts.reduce((a,t)=>a+t.trainees.filter(x=>x.test).length,0);document.getElementById('recent').innerHTML=ts.slice(0,5).map(t=>`<div style="padding:8px 0;border-bottom:1px solid #ddd"><b>${esc(t.topic)}</b> — ${esc(t.date||'')} — ${t.trainees.length} trainees <button class="secondary" onclick="viewRecord('${t.id}')">Open Dashboard</button></div>`).join('')||'<p>No trainings yet.</p>'}
+
+function startTrainee(id,payload){
+let t=data.trainings.find(x=>x.id===id);
+if(!t&&payload&&payload.id===id){
+ t={id:payload.id,site:'Prestige Minsk Square',topic:payload.topic||'',trainer:payload.trainer||'',dept:payload.dept||'',date:payload.date||'',method:payload.method||'',questions:Array.isArray(payload.questions)?payload.questions:[],trainees:[],created:new Date().toISOString()};
+ data.trainings.unshift(t);save();
+}
+if(!t){document.getElementById('traineeForm').innerHTML='<div class="notice warn"><b>Training link could not be opened.</b><br>Please ask the Admin for a fresh QR code.</div>';return}
+document.getElementById('app').classList.add('hidden');document.getElementById('loginPage').classList.add('hidden');document.getElementById('trainee').classList.remove('hidden');document.getElementById('traineeForm').dataset.stage='attendance';document.getElementById('traineeForm').dataset.training=id;renderTrainee(t)}
+function renderTrainee(t){let b=document.getElementById('traineeForm'),stage=b.dataset.stage;if(stage==='attendance'){let qs=Array.isArray(t.questions)?t.questions:[];b.innerHTML=`<div class="notice success"><b>${esc(t.topic)}</b><br>Prestige Minsk Square · ${esc(t.date||'')}</div><h3>Training Attendance & Evaluation</h3><label>Employee ID</label><input id="eid" name="eid" autocomplete="off"><label>Name</label><input id="ename" name="ename" autocomplete="name"><label>Designation</label><input id="edesig" name="edesig"><label>Department</label><input id="edept" name="edept" value="${esc(t.dept||'')}"><h3>Training Questions</h3>${qs.length?qs.map((q,i)=>`<div class="question"><b>Q${i+1}. ${esc(q.text)}</b>${q.options.map((o,j)=>`<div class="option"><label><input type="radio" name="tq${i}" value="${j}"> ${String.fromCharCode(65+j)}. ${esc(o)}</label></div>`).join('')}</div>`).join(''):'<p>No questions were added for this training.</p>'}<button onclick="submitAttendance('${t.id}')">Submit Attendance & Test</button>`}else if(stage==='test')renderTest(t,b);else if(stage==='feedback')renderFeedback(t,b);else b.innerHTML='<div class="notice success"><h3>Completed</h3>Your attendance, test and feedback have been submitted.</div>'}
+function submitAttendance(id){let t=data.trainings.find(x=>x.id===id),eid=document.getElementById('eid').value.trim();if(!t){alert('Training data is not available on this device. Please scan a fresh QR code.');return}if(!eid)return alert('Employee ID is required.');if(!document.getElementById('ename').value.trim())return alert('Name is required.');if(t.trainees.some(x=>x.eid===eid))return alert('Attendance already submitted for this training.');let score=0,total=0,answers=[];(t.questions||[]).forEach((q,i)=>{total+=q.marks;let a=document.querySelector(`input[name=tq${i}]:checked`);answers.push(a?+a.value:null);if(a&&+a.value===q.answer)score+=q.marks});if((t.questions||[]).some((q,i)=>answers[i]===null))return alert('Please answer all training questions before submitting.');t.trainees.push({eid,name:document.getElementById('ename').value.trim(),desig:document.getElementById('edesig').value.trim(),dept:document.getElementById('edept').value.trim(),attendedAt:new Date().toISOString(),test:{answers,score,total,percentage:total?Math.round(score/total*100):0,completedAt:new Date().toISOString()},feedback:null});save();let b=document.getElementById('traineeForm');b.dataset.stage='feedback';renderFeedback(t,b)}
+function renderTest(t,b){if(!t.questions.length){b.dataset.stage='feedback';return renderFeedback(t,b)}b.innerHTML='<h3>Training Test</h3>'+t.questions.map((q,i)=>`<div class="question"><b>Q${i+1}. ${esc(q.text)}</b>${q.options.map((o,j)=>`<div class="option"><label><input type="radio" name="tq${i}" value="${j}"> ${String.fromCharCode(65+j)}. ${esc(o)}</label></div>`).join('')}</div>`).join('')+`<button type="button" onclick="submitTest('${t.id}')">Submit Test</button>`}
+function submitTest(id){let t=data.trainings.find(x=>x.id===id),tr=t.trainees[t.trainees.length-1],score=0,total=0;t.questions.forEach((q,i)=>{total+=q.marks;let a=document.querySelector(`input[name=tq${i}]:checked`);if(a&&+a.value===q.answer)score+=q.marks});tr.test={score,total,percentage:total?Math.round(score/total*100):0,completedAt:new Date().toISOString()};save();let b=document.getElementById('traineeForm');b.dataset.stage='feedback';renderFeedback(t,b)}
+function renderFeedback(t,b){
+let q=(t.questions||[]).slice(0,5);
+let qCells=[0,1,2,3,4].map((i)=>`<td>${q[i]?`<b>Q${i+1}</b><br>${esc(q[i].text)}`:`Q${i+1}`}</td>`).join('');
+b.innerHTML=`<div class="feedback-form">
+<h2 style="text-align:center;margin-bottom:4px">PRESTIGE MINSK SQUARE</h2>
+<h3 style="text-align:center;margin-top:0">Training Attendance, Evaluation &amp; Feedback Form</h3>
+<div class="grid"><div><b>Site Name and Location:</b><br>Prestige Minsk Square</div><div><b>Name of the Trainer:</b><br>${esc(t.trainer||'')}</div><div><b>Topic Covered:</b><br>${esc(t.topic||'')}</div><div><b>Department:</b><br>${esc(t.dept||'')}</div><div><b>Date:</b><br>${esc(t.date||'')}</div><div><b>Method of Training:</b><br>${esc(t.method||'')}</div></div>
+<div class="feedback-legend"><b>QUESTIONS:</b> Q1–Q5 are the training evaluation questions. <b>EVALUATION:</b> Totally understood = 2, Fairly Understood = 1, Not Understood = 0. <b>TRAINING FEEDBACK:</b> Strongly Agree = 4, Agree = 3, Neutral = 2, Disagree = 1.</div>
+<div class="feedback-table-wrap"><table class="exact-feedback">
+<tr><th colspan="3">QUESTIONS</th>${qCells}<th colspan="4">TRAINING FEEDBACK</th><th>Remarks</th><th>Signature</th></tr>
+<tr><th>Sl.no</th><th>Name of the trainee</th><th>Designation</th><th>Q1</th><th>Q2</th><th>Q3</th><th>Q4</th><th>Q5</th><th>Training Content Met the expectations</th><th>Trainer was knowledgable on subject</th><th>Training duration adequate with time for Q&amp;A</th><th>Training facility &amp; Aids</th><th>Remarks</th><th>Signature</th></tr>
+<tr><td>1</td><td>${esc(t.trainees.at(-1)?.name||'')}</td><td>${esc(t.trainees.at(-1)?.desig||'')}</td>
+<td><select id="ev_q1"><option value="2">2</option><option value="1">1</option><option value="0">0</option></select></td>
+<td><select id="ev_q2"><option value="2">2</option><option value="1">1</option><option value="0">0</option></select></td>
+<td><select id="ev_q3"><option value="2">2</option><option value="1">1</option><option value="0">0</option></select></td>
+<td><select id="ev_q4"><option value="2">2</option><option value="1">1</option><option value="0">0</option></select></td>
+<td><select id="ev_q5"><option value="2">2</option><option value="1">1</option><option value="0">0</option></select></td>
+${['content','trainer','duration','facility'].map(x=>`<td><select id="fb_${x}"><option value="4">4 — Strongly Agree</option><option value="3">3 — Agree</option><option value="2">2 — Neutral</option><option value="1">1 — Disagree</option></select></td>`).join('')}
+<td><textarea id="remarks" rows="3"></textarea></td><td><input id="signature" placeholder="Type name/signature"></td></tr></table></div>
+<div class="feedback-footer"><div><b>Name and Signature of the Trainer</b><input id="trainerSignature"></div><div><b>Name &amp; Signature of the Training Co-ordinater</b><input id="coordinatorSignature"></div><div><b>Average Feed Back score</b><div id="feedbackAvg">— / 4</div></div></div>
+<button onclick="submitFeedback('${t.id}')">Submit Feedback</button></div>`;
+['content','trainer','duration','facility'].forEach(x=>document.getElementById('fb_'+x).addEventListener('change',updateFeedbackAverage));updateFeedbackAverage();
+}
+function updateFeedbackAverage(){let ids=['content','trainer','duration','facility'];let vals=ids.map(x=>+document.getElementById('fb_'+x).value);let avg=vals.reduce((a,b)=>a+b,0)/4;let el=document.getElementById('feedbackAvg');if(el)el.textContent=avg.toFixed(2)+' / 4';}
+function submitFeedback(id){let t=data.trainings.find(x=>x.id===id),tr=t.trainees[t.trainees.length-1],vals=['content','trainer','duration','facility'].map(x=>+document.getElementById('fb_'+x).value),evals=[1,2,3,4,5].map(i=>+document.getElementById('ev_q'+i).value);tr.feedback={evaluation:evals,content:vals[0],trainer:vals[1],duration:vals[2],facility:vals[3],average:vals.reduce((a,b)=>a+b,0)/4,remarks:document.getElementById('remarks').value,signature:document.getElementById('signature').value,trainerSignature:document.getElementById('trainerSignature').value,coordinatorSignature:document.getElementById('coordinatorSignature').value,submittedAt:new Date().toISOString()};save();let b=document.getElementById('traineeForm');b.dataset.stage='done';renderTrainee(t)}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+
+// Trainee QR entry: prefer standard query parameters for Chrome/Safari.
+// Keep backward compatibility with older QR codes that used the URL fragment.
+try{
+  const params=new URLSearchParams(location.search||'');
+  // v16 standard format: ?data=<base64url> (single self-contained parameter)
+  // Also accept v15/v14 and older formats for compatibility.
+  let packed=params.get('data') || params.get('payload');
+  let m=params.get('training') || params.get('trainee');
+  if(!m && packed){ const p0=b64urlDecode(packed); if(p0&&p0.id) m=String(p0.id); }
+  if(!m){
+    const hash=location.hash||'';
+    m=(hash.match(/(?:^#|&)training=([^&]+)/)||hash.match(/(?:^#|&)trainee=([^&]+)/)||[])[1];
+    packed=(hash.match(/(?:^#|&)payload=([^&]+)/)||hash.match(/(?:^#|&)data=([^&]+)/)||[])[1];
+    if(m) m=decodeURIComponent(m);
+    if(packed) packed=decodeURIComponent(packed);
+  }
+  if(m){
+    const payload=packed?b64urlDecode(packed):null;
+    startTrainee(m,payload);
+  } else if(params.has('training') || params.has('payload') || params.has('trainee') || params.has('data')) {
+    const f=document.getElementById('traineeForm');
+    if(f) f.innerHTML='<div class="notice warn"><b>Training link is incomplete.</b><br>Please ask the Admin to generate a new QR code.</div>';
+  }
+}catch(e){
+  const f=document.getElementById('traineeForm');
+  if(f) f.innerHTML='<div class="notice warn"><b>Training link could not be opened.</b><br>Please ask the Admin to generate a new QR code.</div>';
+}
+</script>
+</body></html>
